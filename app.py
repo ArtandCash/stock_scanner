@@ -183,39 +183,33 @@ def run_scan(_api_key: str):
 
 
 def style_dataframe(df: pd.DataFrame):
-    """Apply visual styling."""
     def highlight_criteria(val):
         if val is True:
-            return "background-color: #d4edda; color: #155724; font-weight: bold"
+            return "background-color: #d4edda; color: #155724"
         if val is False:
             return "background-color: #f8d7da; color: #721c24"
         return ""
 
     def highlight_score(val):
         if val >= 4:
-            return "background-color: #28a745; color: white; font-weight: bold"
+            return "background-color: #28a745; color: white"
         if val == 3:
-            return "background-color: #ffc107; color: black; font-weight: bold"
+            return "background-color: #ffc107; color: black"
         if val == 2:
             return "background-color: #fd7e14; color: white"
         return ""
 
-    styled = (
-        df.style
-        .map(highlight_criteria, subset=["C1 Up10%", "C2 RVol5x", "C3 News", "C4 $2-20", "C5 Float<20M"])
-        .map(highlight_score, subset=["Score"])
-        .format({
-            "Price": "${:.2f}",
-            "% Change": "{:+.2f}%",
-            "Rel Vol": "{:.1f}x",
-            "Float (M)": "{:.2f}",
-            "Score": "{:.0f}",
-        }, na_rep="-")
-    )
+    styled = df.style.map(
+        highlight_criteria,
+        subset=["C1 Up10%", "C2 RVol5x", "C3 News", "C4 $2-20", "C5 Float<20M"]
+    ).map(
+        highlight_score,
+        subset=["Score"]
+    ).format({
+        "Price": "${:.2f}",
+        "% Change": "{:+.2f}%",
+        "Rel Vol": "{:.1f}x",
+        "Float (M)": "{:.2f}",
+        "Score": "{:.0f}",
+    }, na_rep="-")
     return styled
-
-    def highlight_score(val):
-        if val >= 4:
-            return "background-color: #28a745; color: white; font-weight: bold"
-        if val == 3:
-            return "background
