@@ -172,4 +172,11 @@ def fetch_one(symbol, client):
             "Headline": headline,
             "News List": news_list,
             "C1 Up10%": c1,
-           
+            "C2 RVol5x": c2,
+            "C3 News": c3,
+            "C4 $2-20": c4,
+            "C5 Float<20M": c5,
+            "Score": score,
+        }
+    except Exception:
+        return None
