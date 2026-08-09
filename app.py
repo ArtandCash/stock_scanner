@@ -15,18 +15,52 @@ st.set_page_config(
 # ---------- DARK THEME (inspired by your image) ----------
 st.markdown("""
 <style>
-    .stApp { background-color: #0b1220; color: #e0e6ed; }
-    section[data-testid="stSidebar"] { background-color: #0f172a; border-right: 1px solid #1e293b; }
-    h1, h2, h3, h4 { color: #f1f5f9 !important; }
+    /* Main background */
+    .stApp {
+        background-color: #0b1220;
+        color: #e0e6ed;
+    }
+
+    /* Sidebar background + force white text */
+    section[data-testid="stSidebar"] {
+        background-color: #0f172a !important;
+        border-right: 1px solid #1e293b;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #f1f5f9 !important;
+    }
+    section[data-testid="stSidebar"] .stMarkdown,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span {
+        color: #f1f5f9 !important;
+    }
+
+    /* Headers */
+    h1, h2, h3, h4 {
+        color: #f1f5f9 !important;
+    }
+
+    /* Metric cards */
     div[data-testid="stMetric"] {
-        background-color: #1e293b; border: 1px solid #334155;
-        border-radius: 8px; padding: 12px;
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px;
     }
+
+    /* Buttons */
     .stButton > button {
-        background-color: #3b82f6; color: white; border-radius: 6px;
-        border: none; font-weight: 600;
+        background-color: #3b82f6;
+        color: white;
+        border-radius: 6px;
+        border: none;
+        font-weight: 600;
     }
-    .stButton > button:hover { background-color: #2563eb; color: white; }
+    .stButton > button:hover {
+        background-color: #2563eb;
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
