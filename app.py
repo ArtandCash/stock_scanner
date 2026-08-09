@@ -12,37 +12,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Dark theme
+# ---------- DARK THEME (inspired by your image) ----------
 st.markdown("""
 <style>
-    .stApp {
-        background-color: #0b1220;
-        color: #e0e6ed;
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #0f172a;
-        border-right: 1px solid #1e293b;
-    }
-    h1, h2, h3, h4 {
-        color: #f1f5f9 !important;
-    }
+    .stApp { background-color: #0b1220; color: #e0e6ed; }
+    section[data-testid="stSidebar"] { background-color: #0f172a; border-right: 1px solid #1e293b; }
+    h1, h2, h3, h4 { color: #f1f5f9 !important; }
     div[data-testid="stMetric"] {
-        background-color: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        padding: 12px;
+        background-color: #1e293b; border: 1px solid #334155;
+        border-radius: 8px; padding: 12px;
     }
     .stButton > button {
-        background-color: #3b82f6;
-        color: white;
-        border-radius: 6px;
-        border: none;
-        font-weight: 600;
+        background-color: #3b82f6; color: white; border-radius: 6px;
+        border: none; font-weight: 600;
     }
-    .stButton > button:hover {
-        background-color: #2563eb;
-        color: white;
-    }
+    .stButton > button:hover { background-color: #2563eb; color: white; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -161,6 +145,38 @@ def run_scan():
     df.insert(0, "Rank", range(1, len(df) + 1))
     return df
 
+# Color functions for conditional formatting
+def color_score(val):
+    if val >= 4:
+        return "background-color: #166534; color: #bbf7d0"
+    if val == 3:
+        return "background-color: #854d0e; color: #fef08a"
+    if val == 2:
+        return "background-color: #9a3412; color: #fed7aa"
+    return ""
+
+def color_rvol(val):
+    try:
+        if val is not None and float(val) >= 5:
+            return "background-color: #0e7490; color: #a5f3fc"
+        if val is not None and float(val) >= 3:
+            return "background-color: #1e3a5f; color: #7dd3fc"
+    except Exception:
+        pass
+    return ""
+
+def color_change(val):
+    try:
+        if float(val) >= 10:
+            return "background-color: #166534; color: #bbf7d0"
+        if float(val) > 0:
+            return "color: #4ade80"
+        if float(val) < 0:
+            return "color: #f87171"
+    except Exception:
+        pass
+    return ""
+
 # Sidebar
 with st.sidebar:
     st.markdown("### Settings")
@@ -178,40 +194,91 @@ with st.sidebar:
 
 # Header
 st.markdown("## US Momentum Scanner")
-st.caption("Dark terminal style · 5 equal-weight criteria")
+st.caption("Dark terminal style · Conditional formatting · 5 criteria")
 
 # Scan button
 if st.button("Scan Market Now", type="primary", use_container_width=True):
-    with st.spinner("Scanning... this takes 30-60 seconds"):
+    with st.spinner("Scanning... 30-60 seconds"):
         df = run_scan()
         st.session_state["df"] = df
 
 df = st.session_state.get("df", None)
 
 if df is None or df.empty:
-    st.info("Click the Scan Market Now button above to start.")
+    st.info("Click **Scan Market Now** to load live results.")
 else:
     display_df = df[df["Score"] >= min_score].copy()
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Matches", len(display_df))
-    c2.metric("High Conviction (Score ≥ 4)", len(df[df["Score"] >= 4]))
-    c3.metric("Best Score", int(df["Score"].max()))
+    # Metrics
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Matches", len(display_df))
+    m2.metric("High Conviction (≥4)", len(df[df["Score"] >= 4]))
+    m3.metric("Best Score", int(df["Score"].max()))
 
-    st.markdown("### Momentum Rankings")
-    st.dataframe(
-        display_df[["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "News", "Score"]],
-        use_container_width=True,
-        height=450,
-        hide_index=True
-    )
+    st.markdown("---")
 
-    st.markdown("### News Headlines")
-    news_df = display_df[display_df["News"] == "Yes"][["Symbol", "Headline", "Score"]]
-    if news_df.empty:
-        st.write("No recent news among current matches.")
+    # Two-column layout
+    left, right = st.columns([1.5, 1])
+
+    with left:
+        st.markdown("### Momentum Rankings")
+        table = display_df[["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "News", "Score"]].copy()
+
+        styled = (
+            table.style
+            .map(color_score, subset=["Score"])
+            .map(color_rvol, subset=["Rel Vol"])
+            .map(color_change, subset=["% Change"])
+            .format({
+                "Price": "${:.2f}",
+                "% Change": "{:+.1f}%",
+                "Rel Vol": "{:.1f}x",
+                "Float (M)": "{:.1f}",
+                "Score": "{:.0f}",
+            }, na_rep="—")
+        )
+        st.dataframe(styled, use_container_width=True, height=480, hide_index=True)
+
+    with right:
+        st.markdown("### Stock Detail")
+        if len(display_df) > 0:
+            symbols = display_df["Symbol"].tolist()
+            selected = st.selectbox("Select stock", symbols)
+
+            row = display_df[display_df["Symbol"] == selected].iloc[0]
+
+            st.markdown(f"**{selected}**")
+            st.markdown(f"### ${row['Price']:.2f}  ({row['% Change']:+.1f}%)")
+            st.write(f"Rel Vol: **{row['Rel Vol'] if row['Rel Vol'] else '—'}x**")
+            st.write(f"Float: **{row['Float (M)'] if row['Float (M)'] else '—'}M**")
+            st.write(f"Score: **{row['Score']}**")
+            st.write(f"News: **{row['News']}**")
+
+            if row["Headline"]:
+                st.markdown("#### Latest Headline")
+                st.write(row["Headline"])
+
+            # Simple price chart (stable)
+            st.markdown("#### Price Chart (5 days)")
+            try:
+                hist = yf.Ticker(selected).history(period="5d")
+                if not hist.empty:
+                    st.line_chart(hist["Close"])
+                else:
+                    st.caption("No chart data")
+            except Exception:
+                st.caption("Chart unavailable")
+        else:
+            st.info("No stocks match filters.")
+
+    # Bottom high-conviction section
+    st.markdown("---")
+    st.markdown("### High Conviction (Score ≥ 3)")
+    top = df[df["Score"] >= 3][["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "Score", "Headline"]].head(10)
+    if not top.empty:
+        st.dataframe(top, use_container_width=True, hide_index=True)
     else:
-        st.dataframe(news_df, use_container_width=True, hide_index=True)
+        st.caption("No high-conviction names this scan.")
 
     csv = display_df.to_csv(index=False).encode("utf-8")
     st.download_button("Download CSV", csv, "scanner_results.csv", "text/csv")
