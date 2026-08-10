@@ -12,46 +12,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ---------- DARK THEME + WHITE TEXT ----------
 st.markdown("""
 <style>
-    /* Main background */
     .stApp {
         background-color: #0b1220 !important;
         color: #f1f5f9 !important;
     }
-
-    /* Force all main text to be light */
-    .stApp p, .stApp span, .stApp label, .stApp div, .stApp li {
+    .stApp p, .stApp span, .stApp label, .stApp div {
         color: #f1f5f9 !important;
     }
-
-    /* Sidebar */
     section[data-testid="stSidebar"] {
         background-color: #0f172a !important;
-        border-right: 1px solid #1e293b;
     }
     section[data-testid="stSidebar"] * {
         color: #f1f5f9 !important;
     }
-
-    /* Headers */
-    h1, h2, h3, h4, h5, h6 {
+    h1, h2, h3, h4 {
         color: #f1f5f9 !important;
     }
-
-    /* Metric cards */
     div[data-testid="stMetric"] {
         background-color: #1e293b !important;
         border: 1px solid #334155;
         border-radius: 8px;
         padding: 12px;
     }
-    div[data-testid="stMetric"] label, div[data-testid="stMetric"] div {
-        color: #f1f5f9 !important;
-    }
-
-    /* Buttons */
     .stButton > button {
         background-color: #3b82f6 !important;
         color: white !important;
@@ -59,27 +43,14 @@ st.markdown("""
         border: none;
         font-weight: 600;
     }
-    .stButton > button:hover {
-        background-color: #2563eb !important;
-        color: white !important;
-    }
-
-    /* Dataframe / table text */
-    .stDataFrame, .stDataFrame * {
-        color: #e0e6ed !important;
-    }
-
-    /* Selectbox and other widgets */
-    .stSelectbox label, .stSlider label {
-        color: #f1f5f9 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "d9s6fc1r01qoo7o6rmngd9s6fc1r01qoo7o6rmo0")
 MAX_CANDIDATES = 25
 NEWS_LOOKBACK_DAYS = 2
-PRICE_MIN, PRICE_MAX = 2.0, 20.0
+PRICE_MIN = 2.0
+PRICE_MAX = 20.0
 REL_VOL_THRESHOLD = 5.0
 
 def get_seed_tickers():
@@ -109,7 +80,6 @@ def fetch_one(symbol, client):
     try:
         t = yf.Ticker(symbol)
         info = t.info or {}
-
         price = info.get("currentPrice") or info.get("regularMarketPrice")
         pct_change = info.get("regularMarketChangePercent")
         if price is None or pct_change is None:
@@ -122,7 +92,6 @@ def fetch_one(symbol, client):
             avg_vol = hist["Volume"].tail(20).mean() if not hist.empty else None
 
         rel_vol = (current_vol / avg_vol) if avg_vol and avg_vol > 0 else None
-
         float_shares = info.get("floatShares") or info.get("sharesOutstanding")
         float_m = float_shares / 1_000_000 if float_shares else None
 
@@ -153,7 +122,7 @@ def fetch_one(symbol, client):
             "Float (M)": round(float_m, 2) if float_m else None,
             "News": "Yes" if has_news else "No",
             "Headline": headline,
-            "Score": score,
+            "Score": score
         }
     except Exception:
         return None
@@ -178,7 +147,7 @@ def run_scan():
                 results.append(data)
             done += 1
             progress.progress(done / total)
-            status.text(f"Scanned {done} of {total}...")
+            status.text(f"Scanned {done} of {total}")
 
     progress.empty()
     status.empty()
@@ -187,7 +156,8 @@ def run_scan():
         return pd.DataFrame()
 
     df = pd.DataFrame(results)
-    df = df.sort_values(by=["Score", "% Change"], ascending=[False, False]).reset_index(drop=True)
+    df = df.sort_values(by=["Score", "% Change"], ascending=[False, False])
+    df = df.reset_index(drop=True)
     df.insert(0, "Rank", range(1, len(df) + 1))
     return df
 
@@ -227,19 +197,97 @@ with st.sidebar:
     st.markdown("### Settings")
     min_score = st.slider("Minimum Score", 0, 5, 2)
     st.markdown("---")
-    st.markdown("""
-    **Criteria (equal weight)**  
-    1. Up ≥ 10% today  
-    2. Rel Vol ≥ 5×  
-    3. Recent News  
-    4. Price $2 – $20  
-    5. Float < 20M
-    """)
+    st.markdown("**Criteria (equal weight)**")
+    st.markdown("1. Up ≥ 10% today")
+    st.markdown("2. Rel Vol ≥ 5x")
+    st.markdown("3. Recent News")
+    st.markdown("4. Price $2 – $20")
+    st.markdown("5. Float < 20M")
     st.caption("Educational tool only. Not financial advice.")
 
 # Header
 st.markdown("## US Momentum Scanner")
-st.caption("Dark terminal style · Conditional formatting · 5 criteria")
-st.write("TEST 1 - Can you see this text?")
-st.button("TEST BUTTON")
-st.stop()   # This stops the rest of the code from running
+st.caption("Dark terminal style - Conditional formatting - 5 criteria")
+
+# Scan button
+scan_clicked = st.button("Scan Market Now", type="primary", use_container_width=True)
+
+if scan_clicked:
+    with st.spinner("Scanning... please wait 30-60 seconds"):
+        df = run_scan()
+        st.session_state["df"] = df
+
+df = st.session_state.get("df", None)
+
+if df is None or df.empty:
+    st.info("Click the Scan Market Now button above to start.")
+else:
+    display_df = df[df["Score"] >= min_score].copy()
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Matches", len(display_df))
+    m2.metric("High Conviction (Score >= 4)", len(df[df["Score"] >= 4]))
+    m3.metric("Best Score", int(df["Score"].max()))
+
+    st.markdown("---")
+
+    left, right = st.columns([1.5, 1])
+
+    with left:
+        st.markdown("### Momentum Rankings")
+        cols = ["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "News", "Score"]
+        table = display_df[cols].copy()
+
+        styled = table.style.map(color_score, subset=["Score"])
+        styled = styled.map(color_rvol, subset=["Rel Vol"])
+        styled = styled.map(color_change, subset=["% Change"])
+        styled = styled.format({
+            "Price": "${:.2f}",
+            "% Change": "{:+.1f}%",
+            "Rel Vol": "{:.1f}x",
+            "Float (M)": "{:.1f}",
+            "Score": "{:.0f}"
+        }, na_rep="-")
+
+        st.dataframe(styled, use_container_width=True, height=480, hide_index=True)
+
+    with right:
+        st.markdown("### Stock Detail")
+        if len(display_df) > 0:
+            symbols = display_df["Symbol"].tolist()
+            selected = st.selectbox("Select stock", symbols)
+            row = display_df[display_df["Symbol"] == selected].iloc[0]
+
+            st.markdown(f"**{selected}**")
+            st.markdown(f"### ${row['Price']:.2f} ({row['% Change']:+.1f}%)")
+            st.write(f"Rel Vol: **{row['Rel Vol'] if row['Rel Vol'] else '-'}x**")
+            st.write(f"Float: **{row['Float (M)'] if row['Float (M)'] else '-'}M**")
+            st.write(f"Score: **{row['Score']}**")
+            st.write(f"News: **{row['News']}**")
+
+            if row["Headline"]:
+                st.markdown("#### Latest Headline")
+                st.write(row["Headline"])
+
+            st.markdown("#### Price Chart (5 days)")
+            try:
+                hist = yf.Ticker(selected).history(period="5d")
+                if not hist.empty:
+                    st.line_chart(hist["Close"])
+                else:
+                    st.caption("No chart data")
+            except Exception:
+                st.caption("Chart unavailable")
+        else:
+            st.info("No stocks match the current filters.")
+
+    st.markdown("---")
+    st.markdown("### High Conviction (Score >= 3)")
+    top = df[df["Score"] >= 3][["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "Score", "Headline"]].head(10)
+    if not top.empty:
+        st.dataframe(top, use_container_width=True, hide_index=True)
+    else:
+        st.caption("No high-conviction names this scan.")
+
+    csv = display_df.to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", csv, "scanner_results.csv", "text/csv")
