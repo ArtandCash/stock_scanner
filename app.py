@@ -238,4 +238,5 @@ with st.sidebar:
     st.caption("Educational tool only. Not financial advice.")
 
 # Header
-st.markdown("## US
+st.markdown("## US Momentum Scanner")
+st.caption("Dark terminal style · Conditional formatting · 5 criteria")
