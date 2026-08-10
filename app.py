@@ -297,4 +297,71 @@ else:
 
     with left:
         st.markdown("### Momentum Rankings")
-        cols = ["Rank", "Symbol", "Price", "% Change",
+        cols = ["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "News", "Score"]
+        table = display_df[cols].copy()
+
+        styled = table.style.map(color_score, subset=["Score"])
+        styled = styled.map(color_rvol, subset=["Rel Vol"])
+        styled = styled.map(color_change, subset=["% Change"])
+        styled = styled.format({
+            "Price": "${:.2f}",
+            "% Change": "{:+.1f}%",
+            "Rel Vol": "{:.1f}x",
+            "Float (M)": "{:.1f}",
+            "Score": "{:.0f}"
+        }, na_rep="-")
+
+        st.dataframe(styled, use_container_width=True, height=420, hide_index=True)
+
+    with right:
+        st.markdown("### Stock Detail")
+        if len(display_df) > 0:
+            symbols = display_df["Symbol"].tolist()
+            selected = st.selectbox("Select stock", symbols)
+            row = display_df[display_df["Symbol"] == selected].iloc[0]
+
+            st.markdown(f"**{selected}**")
+            st.markdown(f"### ${row['Price']:.2f} ({row['% Change']:+.1f}%)")
+            st.write(f"Rel Vol: **{row['Rel Vol'] if row['Rel Vol'] else '-'}x**")
+            st.write(f"Float: **{row['Float (M)'] if row['Float (M)'] else '-'}M**")
+            st.write(f"Score: **{row['Score']}**")
+            st.write(f"News: **{row['News']}**")
+
+            if row["Headline"]:
+                st.markdown("#### Latest Headline")
+                st.write(row["Headline"])
+        else:
+            st.info("No stocks match the current filters.")
+            selected = None
+
+    # ---------- TWO CHARTS SECTION ----------
+    if len(display_df) > 0 and selected:
+        st.markdown("---")
+        st.markdown("### Charts")
+
+        chart_col1, chart_col2 = st.columns(2)
+
+        with chart_col1:
+            fig1 = make_candle_chart(selected, period="5d", interval="15m", title="Intraday (15m)")
+            if fig1:
+                st.plotly_chart(fig1, use_container_width=True)
+            else:
+                st.caption("Intraday chart unavailable")
+
+        with chart_col2:
+            fig2 = make_candle_chart(selected, period="1mo", interval="1d", title="Daily")
+            if fig2:
+                st.plotly_chart(fig2, use_container_width=True)
+            else:
+                st.caption("Daily chart unavailable")
+
+    st.markdown("---")
+    st.markdown("### High Conviction (Score >= 3)")
+    top = df[df["Score"] >= 3][["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "Score", "Headline"]].head(10)
+    if not top.empty:
+        st.dataframe(top, use_container_width=True, hide_index=True)
+    else:
+        st.caption("No high-conviction names this scan.")
+
+    csv = display_df.to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", csv, "scanner_results.csv", "text/csv")
