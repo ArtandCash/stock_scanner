@@ -240,3 +240,6 @@ with st.sidebar:
 # Header
 st.markdown("## US Momentum Scanner")
 st.caption("Dark terminal style · Conditional formatting · 5 criteria")
+st.write("TEST 1 - Can you see this text?")
+st.button("TEST BUTTON")
+st.stop()   # This stops the rest of the code from running
