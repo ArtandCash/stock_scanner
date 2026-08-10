@@ -163,13 +163,10 @@ def run_scan():
     df.insert(0, "Rank", range(1, len(df) + 1))
     return df
 
-def make_candle_chart(symbol, period="5d", interval="15m", title="Intraday"):
+def make_candle_chart(symbol, period, interval, title):
     try:
         t = yf.Ticker(symbol)
         hist = t.history(period=period, interval=interval)
-        if hist.empty:
-            hist = t.history(period="1mo", interval="1d")
-            title = "Daily"
         if hist.empty:
             return None
 
@@ -212,7 +209,7 @@ def make_candle_chart(symbol, period="5d", interval="15m", title="Intraday"):
             paper_bgcolor="#0b1220",
             plot_bgcolor="#0f172a",
             font=dict(color="#e0e6ed"),
-            height=380,
+            height=400,
             margin=dict(l=10, r=10, t=40, b=10),
             xaxis_rangeslider_visible=False,
             showlegend=False
@@ -334,7 +331,7 @@ else:
             st.info("No stocks match the current filters.")
             selected = None
 
-    # ---------- TWO CHARTS SECTION ----------
+    # ---------- TWO CHARTS: Daily + Hourly ----------
     if len(display_df) > 0 and selected:
         st.markdown("---")
         st.markdown("### Charts")
@@ -342,18 +339,20 @@ else:
         chart_col1, chart_col2 = st.columns(2)
 
         with chart_col1:
-            fig1 = make_candle_chart(selected, period="5d", interval="15m", title="Intraday (15m)")
+            st.markdown("**Daily Chart**")
+            fig1 = make_candle_chart(selected, period="3mo", interval="1d", title="By Day")
             if fig1:
                 st.plotly_chart(fig1, use_container_width=True)
             else:
-                st.caption("Intraday chart unavailable")
+                st.caption("Daily chart unavailable")
 
         with chart_col2:
-            fig2 = make_candle_chart(selected, period="1mo", interval="1d", title="Daily")
+            st.markdown("**Hourly Chart**")
+            fig2 = make_candle_chart(selected, period="10d", interval="1h", title="By Hour")
             if fig2:
                 st.plotly_chart(fig2, use_container_width=True)
             else:
-                st.caption("Daily chart unavailable")
+                st.caption("Hourly chart unavailable")
 
     st.markdown("---")
     st.markdown("### High Conviction (Score >= 3)")
