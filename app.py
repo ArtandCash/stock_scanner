@@ -2,6 +2,8 @@ import streamlit as st
 import yfinance as yf
 import finnhub
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -161,6 +163,66 @@ def run_scan():
     df.insert(0, "Rank", range(1, len(df) + 1))
     return df
 
+def make_candle_chart(symbol, period="5d", interval="15m", title="Intraday"):
+    try:
+        t = yf.Ticker(symbol)
+        hist = t.history(period=period, interval=interval)
+        if hist.empty:
+            hist = t.history(period="1mo", interval="1d")
+            title = "Daily"
+        if hist.empty:
+            return None
+
+        fig = make_subplots(
+            rows=2, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.03,
+            row_heights=[0.72, 0.28],
+            subplot_titles=(f"{symbol} - {title}", "Volume")
+        )
+
+        fig.add_trace(
+            go.Candlestick(
+                x=hist.index,
+                open=hist["Open"],
+                high=hist["High"],
+                low=hist["Low"],
+                close=hist["Close"],
+                increasing_line_color="#22c55e",
+                decreasing_line_color="#ef4444",
+                name="Price"
+            ),
+            row=1, col=1
+        )
+
+        colors = ["#22c55e" if c >= o else "#ef4444" for o, c in zip(hist["Open"], hist["Close"])]
+        fig.add_trace(
+            go.Bar(
+                x=hist.index,
+                y=hist["Volume"],
+                marker_color=colors,
+                opacity=0.7,
+                name="Volume"
+            ),
+            row=2, col=1
+        )
+
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="#0b1220",
+            plot_bgcolor="#0f172a",
+            font=dict(color="#e0e6ed"),
+            height=380,
+            margin=dict(l=10, r=10, t=40, b=10),
+            xaxis_rangeslider_visible=False,
+            showlegend=False
+        )
+        fig.update_xaxes(gridcolor="#1e293b")
+        fig.update_yaxes(gridcolor="#1e293b")
+        return fig
+    except Exception:
+        return None
+
 def color_score(val):
     if val >= 4:
         return "background-color: #166534; color: #bbf7d0"
@@ -235,59 +297,4 @@ else:
 
     with left:
         st.markdown("### Momentum Rankings")
-        cols = ["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "News", "Score"]
-        table = display_df[cols].copy()
-
-        styled = table.style.map(color_score, subset=["Score"])
-        styled = styled.map(color_rvol, subset=["Rel Vol"])
-        styled = styled.map(color_change, subset=["% Change"])
-        styled = styled.format({
-            "Price": "${:.2f}",
-            "% Change": "{:+.1f}%",
-            "Rel Vol": "{:.1f}x",
-            "Float (M)": "{:.1f}",
-            "Score": "{:.0f}"
-        }, na_rep="-")
-
-        st.dataframe(styled, use_container_width=True, height=480, hide_index=True)
-
-    with right:
-        st.markdown("### Stock Detail")
-        if len(display_df) > 0:
-            symbols = display_df["Symbol"].tolist()
-            selected = st.selectbox("Select stock", symbols)
-            row = display_df[display_df["Symbol"] == selected].iloc[0]
-
-            st.markdown(f"**{selected}**")
-            st.markdown(f"### ${row['Price']:.2f} ({row['% Change']:+.1f}%)")
-            st.write(f"Rel Vol: **{row['Rel Vol'] if row['Rel Vol'] else '-'}x**")
-            st.write(f"Float: **{row['Float (M)'] if row['Float (M)'] else '-'}M**")
-            st.write(f"Score: **{row['Score']}**")
-            st.write(f"News: **{row['News']}**")
-
-            if row["Headline"]:
-                st.markdown("#### Latest Headline")
-                st.write(row["Headline"])
-
-            st.markdown("#### Price Chart (5 days)")
-            try:
-                hist = yf.Ticker(selected).history(period="5d")
-                if not hist.empty:
-                    st.line_chart(hist["Close"])
-                else:
-                    st.caption("No chart data")
-            except Exception:
-                st.caption("Chart unavailable")
-        else:
-            st.info("No stocks match the current filters.")
-
-    st.markdown("---")
-    st.markdown("### High Conviction (Score >= 3)")
-    top = df[df["Score"] >= 3][["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "Score", "Headline"]].head(10)
-    if not top.empty:
-        st.dataframe(top, use_container_width=True, hide_index=True)
-    else:
-        st.caption("No high-conviction names this scan.")
-
-    csv = display_df.to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv, "scanner_results.csv", "text/csv")
+        cols = ["Rank", "Symbol", "Price", "% Change",
