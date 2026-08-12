@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ===================== DESIGN + FONT =====================
+# ===================== DESIGN =====================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -22,7 +22,6 @@ st.markdown("""
     .stApp, .stApp * {
         font-family: 'Phonic', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
     }
-
     .stApp {
         background-color: #070b14 !important;
         color: #e8edf5 !important;
@@ -60,6 +59,14 @@ st.markdown("""
         border-radius: 12px;
         padding: 16px 18px;
         margin-bottom: 12px;
+    }
+    .criteria-box {
+        background: #0f172a;
+        border: 1px solid #1e2a3d;
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        font-size: 0.92rem;
     }
     .news-item {
         padding: 7px 0;
@@ -166,7 +173,7 @@ def fetch_stock(symbol, client, market="US"):
             c3 = len(news_items) > 0
             c4 = 2.0 <= price <= 20.0
             c5 = float_m is not None and float_m < 20
-        else:
+        else:  # UK_EU
             c1 = pct_change >= 8
             c2 = rel_vol is not None and rel_vol >= 4
             c3 = len(news_items) > 0
@@ -326,80 +333,25 @@ def color_change(val):
     except: pass
     return ""
 
-# ===================== SIDEBAR (criteria by tab) =====================
-# We detect active tab via session state
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = "US"
+def render_scanner(market, criteria_html):
+    # Show criteria for this tab
+    st.markdown(f'<div class="criteria-box">{criteria_html}</div>', unsafe_allow_html=True)
 
-with st.sidebar:
-    st.markdown("### Criteria")
-    tab_choice = st.radio(
-        "Market",
-        ["US Stocks", "UK / EU Stocks", "Crypto"],
-        key="tab_radio",
-        label_visibility="collapsed"
-    )
+    key = f"df_{market}"
+    if key not in st.session_state:
+        with st.spinner(f"Loading {market} data…"):
+            st.session_state[key] = run_scan(market)
 
-    if tab_choice == "US Stocks":
-        st.session_state.active_tab = "US"
-        st.markdown("""
-        **US Criteria**  
-        1. Up ≥ 10% today  
-        2. Rel Vol ≥ 5×  
-        3. Recent News  
-        4. Price $2 – $20  
-        5. Float < 20M  
-        """)
-    elif tab_choice == "UK / EU Stocks":
-        st.session_state.active_tab = "UK_EU"
-        st.markdown("""
-        **UK / EU Criteria**  
-        1. Up ≥ 8% today  
-        2. Rel Vol ≥ 4×  
-        3. Recent News  
-        4. Price £0.05 – £15  
-        5. Float < 60M  
-        """)
-    else:
-        st.session_state.active_tab = "Crypto"
-        st.markdown("""
-        **Crypto Criteria**  
-        1. Up ≥ 8% today  
-        2. Rel Vol ≥ 3×  
-        3. Recent News  
-        4. Price $0.05 – $50  
-        5. (Circulating supply shown)  
-        """)
+    if st.button("Re-scan Now", type="primary", key=f"btn_{market}", use_container_width=True):
+        with st.spinner("Scanning…"):
+            st.session_state[key] = run_scan(market)
 
-    st.markdown("---")
-    min_score = st.slider("Minimum Score", 0, 5, 2)
-    st.caption("Educational tool only. Not financial advice.")
+    df = st.session_state.get(key, None)
+    if df is None or df.empty:
+        st.info("No data yet. Click Re-scan Now.")
+        return
 
-# ===================== MAIN CONTENT =====================
-st.markdown("## Momentum Scanner")
-st.caption("US · UK/EU · Crypto")
-
-market = st.session_state.active_tab
-title_map = {"US": "US Stocks", "UK_EU": "UK / EU Stocks", "Crypto": "Crypto"}
-st.markdown(f"### {title_map[market]}")
-
-# Auto-scan when tab changes and no data exists
-key = f"df_{market}"
-if key not in st.session_state or st.session_state.get("last_tab") != market:
-    st.session_state.last_tab = market
-    with st.spinner(f"Loading {title_map[market]}…"):
-        st.session_state[key] = run_scan(market)
-
-# Manual re-scan button
-if st.button("Re-scan Now", type="primary", use_container_width=True):
-    with st.spinner("Scanning…"):
-        st.session_state[key] = run_scan(market)
-
-df = st.session_state.get(key, None)
-
-if df is None or df.empty:
-    st.info("No data yet. Click Re-scan Now.")
-else:
+    min_score = st.session_state.get("min_score", 2)
     display = df[df["Score"] >= min_score].copy()
 
     m1, m2, m3 = st.columns(3)
@@ -409,7 +361,6 @@ else:
 
     st.markdown("---")
 
-    # Rankings (left) + Detail/News (right)
     left, right = st.columns([1.55, 1])
 
     with left:
@@ -458,7 +409,7 @@ else:
         else:
             st.info("No stocks match the filters.")
 
-    # ========== CHARTS FULL WIDTH BELOW RANKINGS ==========
+    # Charts full width BELOW rankings
     if selected:
         st.markdown("---")
         st.markdown("#### Charts")
@@ -478,4 +429,48 @@ else:
 
     st.markdown("---")
     csv = display.drop(columns=["News Items"], errors="ignore").to_csv(index=False).encode("utf-8")
-    st.download_button("Download CSV", csv, f"scanner_{market}.csv", "text/csv")
+    st.download_button("Download CSV", csv, f"scanner_{market}.csv", "text/csv", key=f"dl_{market}")
+
+# ===================== SIDEBAR =====================
+with st.sidebar:
+    st.markdown("### Settings")
+    st.session_state.min_score = st.slider("Minimum Score", 0, 5, 2)
+    st.markdown("---")
+    st.caption("Criteria change automatically when you switch tabs.")
+    st.caption("Educational tool only. Not financial advice.")
+
+# ===================== MAIN =====================
+st.markdown("## Momentum Scanner")
+st.caption("US · UK/EU · Crypto")
+
+tab1, tab2, tab3 = st.tabs(["🇺🇸 US Stocks", "🇬🇧 EU / UK Stocks", "🪙 Crypto"])
+
+with tab1:
+    render_scanner("US", """
+        <b>US Criteria (equal weight)</b><br>
+        1. Up ≥ 10% today<br>
+        2. Rel Vol ≥ 5×<br>
+        3. Recent News<br>
+        4. Price $2 – $20<br>
+        5. Float < 20M
+    """)
+
+with tab2:
+    render_scanner("UK_EU", """
+        <b>UK / EU Criteria (equal weight)</b><br>
+        1. Up ≥ 8% today<br>
+        2. Rel Vol ≥ 4×<br>
+        3. Recent News<br>
+        4. Price £0.05 – £15<br>
+        5. Float < 60M
+    """)
+
+with tab3:
+    render_scanner("Crypto", """
+        <b>Crypto Criteria (equal weight)</b><br>
+        1. Up ≥ 8% today<br>
+        2. Rel Vol ≥ 3×<br>
+        3. Recent News<br>
+        4. Price $0.05 – $50<br>
+        5. Circulating supply shown for reference
+    """)
