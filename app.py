@@ -435,9 +435,20 @@ def render_scanner(market, criteria_html):
 with st.sidebar:
     st.markdown("### Settings")
     st.session_state.min_score = st.slider("Minimum Score", 0, 5, 2)
+    
+    auto_refresh = st.toggle("Auto-refresh every 90s", value=False)
+    
     st.markdown("---")
     st.caption("Criteria change automatically when you switch tabs.")
     st.caption("Educational tool only. Not financial advice.")
+
+# Auto-refresh logic
+if auto_refresh:
+    try:
+        from streamlit_autorefresh import st_autorefresh
+        st_autorefresh(interval=90_000, key="auto_refresh_90s")
+    except ImportError:
+        st.sidebar.warning("Add streamlit-autorefresh to requirements.txt")
 
 # ===================== MAIN =====================
 st.markdown("## Momentum Scanner")
