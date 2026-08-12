@@ -340,10 +340,10 @@ def render_scanner(market, title, min_score_default=2):
 st.markdown("## Momentum Scanner")
 st.caption("US · UK/EU · Crypto  |  Dark terminal style")
 
-tab1, tab2, tab3 = st.tabs(["🇺🇸 US Stocks", "🇬🇧 EU / UK Stocks", "🪙 Crypto"])
+tab1, tab2, tab3 = st.tabs(["U.S. Stocks", "UK/EU Stocks", "🪙 Crypto"])
 
 with tab1:
-    render_scanner("US", "US Momentum Scanner")
+    render_scanner("US", "U.S. Momentum Scanner")
 
 with tab2:
     st.caption("Criteria adapted: Price £0.05–£15 · Float < 60M · Up ≥ 8%")
