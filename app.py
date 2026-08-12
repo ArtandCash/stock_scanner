@@ -14,29 +14,66 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ===================== DESIGN =====================
+# ===================== DESIGN + FONT =====================
 st.markdown("""
 <style>
-    .stApp { background-color: #070b14 !important; color: #e8edf5 !important; }
-    .stApp p, .stApp span, .stApp label, .stApp div, .stApp li { color: #e8edf5 !important; }
-    section[data-testid="stSidebar"] { background-color: #0c1220 !important; border-right: 1px solid #1a2332 !important; }
-    section[data-testid="stSidebar"] * { color: #e8edf5 !important; }
-    h1, h2, h3, h4 { color: #f0f4fa !important; font-weight: 600 !important; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    .stApp, .stApp * {
+        font-family: 'Phonic', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+
+    .stApp {
+        background-color: #070b14 !important;
+        color: #e8edf5 !important;
+    }
+    .stApp p, .stApp span, .stApp label, .stApp div, .stApp li {
+        color: #e8edf5 !important;
+    }
+    section[data-testid="stSidebar"] {
+        background-color: #0c1220 !important;
+        border-right: 1px solid #1a2332 !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #e8edf5 !important;
+    }
+    h1, h2, h3, h4 {
+        color: #f0f4fa !important;
+        font-weight: 600 !important;
+    }
     div[data-testid="stMetric"] {
         background: linear-gradient(145deg, #121a2b, #0e1522) !important;
-        border: 1px solid #1e2a3d !important; border-radius: 10px !important; padding: 14px 16px !important;
+        border: 1px solid #1e2a3d !important;
+        border-radius: 10px !important;
+        padding: 14px 16px !important;
     }
     .stButton > button {
-        background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; color: white !important;
-        border: none !important; border-radius: 8px !important; font-weight: 600 !important;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
     }
     .detail-card {
-        background: linear-gradient(145deg, #121a2b, #0e1522); border: 1px solid #1e2a3d;
-        border-radius: 12px; padding: 18px 20px; margin-bottom: 14px;
+        background: linear-gradient(145deg, #121a2b, #0e1522);
+        border: 1px solid #1e2a3d;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 12px;
     }
-    .news-item { padding: 7px 0; border-bottom: 1px solid #1e2a3d; font-size: 0.9rem; }
-    .news-item a { color: #7dd3fc !important; text-decoration: none; }
-    .news-source { color: #64748b !important; font-size: 0.75rem; }
+    .news-item {
+        padding: 7px 0;
+        border-bottom: 1px solid #1e2a3d;
+        font-size: 0.9rem;
+    }
+    .news-item a {
+        color: #7dd3fc !important;
+        text-decoration: none;
+    }
+    .news-source {
+        color: #64748b !important;
+        font-size: 0.75rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -44,16 +81,12 @@ FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "d9s6fc1r01qoo7o6rmngd9s6fc1
 
 # ===================== SEED LISTS =====================
 UK_EU_SEEDS = [
-    # UK / AIM examples (add more as needed)
     "BP.L", "SHEL.L", "HSBA.L", "VOD.L", "GSK.L", "AZN.L", "ULVR.L", "DGE.L",
     "RIO.L", "BHP.L", "GLEN.L", "AAL.L", "NG.L", "LLOY.L", "BARC.L", "NWG.L",
     "TSCO.L", "SBRY.L", "BT-A.L", "CNA.L", "SSE.L", "RR.L", "BA.L", "EXPN.L",
     "AUTO.L", "JD.L", "IHG.L", "WPP.L", "INF.L", "REL.L", "PRU.L", "AV.L",
     "SMT.L", "III.L", "LSEG.L", "CRH.L", "AHT.L", "SN.L", "DCC.L", "BNZL.L",
-    # Some smaller / more momentum-oriented names
-    "FRES.L", "POLY.L", "HOC.L", "SDE.L", "AMER.L", "BOO.L", "CURY.L", "ASC.L",
-    "GHH.L", "YOU.L", "DPLM.L", "SPX.L", "RWI.L", "SGE.L", "SMDS.L",
-    # Europe examples
+    "FRES.L", "POLY.L", "HOC.L", "AMER.L", "BOO.L", "CURY.L", "ASC.L",
     "SAP.DE", "SIE.DE", "ALV.DE", "DTE.DE", "BAS.DE", "BMW.DE", "VOW3.DE",
     "MC.PA", "OR.PA", "AIR.PA", "SAN.PA", "TTE.PA", "BNP.PA", "AI.PA",
     "ASML.AS", "INGA.AS", "PHIA.AS", "UNA.AS", "AD.AS",
@@ -69,7 +102,7 @@ CRYPTO_SEEDS = [
     "PEPE-USD", "WIF-USD", "BONK-USD", "FLOKI-USD", "RENDER-USD", "FET-USD", "TAO-USD"
 ]
 
-# ===================== HELPERS =====================
+# ===================== DATA FUNCTIONS =====================
 def get_us_seeds():
     tickers = set()
     try:
@@ -116,7 +149,8 @@ def fetch_stock(symbol, client, market="US"):
         try:
             end = datetime.now().strftime("%Y-%m-%d")
             start = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
-            news = client.company_news(symbol.split(".")[0], _from=start, to=end)
+            base = symbol.split(".")[0]
+            news = client.company_news(base, _from=start, to=end)
             if news:
                 for n in news[:6]:
                     h = n.get("headline", "").strip()
@@ -126,14 +160,13 @@ def fetch_stock(symbol, client, market="US"):
         except Exception:
             pass
 
-        # Criteria by market
         if market == "US":
             c1 = pct_change >= 10
             c2 = rel_vol is not None and rel_vol >= 5
             c3 = len(news_items) > 0
             c4 = 2.0 <= price <= 20.0
             c5 = float_m is not None and float_m < 20
-        else:  # UK/EU
+        else:
             c1 = pct_change >= 8
             c2 = rel_vol is not None and rel_vol >= 4
             c3 = len(news_items) > 0
@@ -142,11 +175,15 @@ def fetch_stock(symbol, client, market="US"):
 
         score = sum([c1, c2, c3, c4, c5])
         return {
-            "Symbol": symbol, "Price": round(price, 4 if price < 1 else 2),
-            "% Change": round(pct_change, 2), "Rel Vol": round(rel_vol, 1) if rel_vol else None,
+            "Symbol": symbol,
+            "Price": round(price, 4 if price < 1 else 2),
+            "% Change": round(pct_change, 2),
+            "Rel Vol": round(rel_vol, 1) if rel_vol else None,
             "Float (M)": round(float_m, 2) if float_m else None,
-            "News": "Yes" if news_items else "No", "Headline": news_items[0]["headline"] if news_items else "",
-            "News Items": news_items, "Score": score
+            "News": "Yes" if news_items else "No",
+            "Headline": news_items[0]["headline"] if news_items else "",
+            "News Items": news_items,
+            "Score": score
         }
     except Exception:
         return None
@@ -174,7 +211,6 @@ def fetch_crypto(symbol, client):
         try:
             end = datetime.now().strftime("%Y-%m-%d")
             start = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
-            # Finnhub crypto news is limited; try general or skip gracefully
             base = symbol.replace("-USD", "")
             news = client.company_news(base, _from=start, to=end)
             if news:
@@ -190,15 +226,19 @@ def fetch_crypto(symbol, client):
         c2 = rel_vol is not None and rel_vol >= 3
         c3 = len(news_items) > 0
         c4 = 0.05 <= price <= 50.0
-        c5 = True  # circulating supply is informational only for now
+        c5 = True
         score = sum([c1, c2, c3, c4, c5])
 
         return {
-            "Symbol": symbol, "Price": round(price, 6 if price < 1 else 2),
-            "% Change": round(pct_change, 2), "Rel Vol": round(rel_vol, 1) if rel_vol else None,
+            "Symbol": symbol,
+            "Price": round(price, 6 if price < 1 else 2),
+            "% Change": round(pct_change, 2),
+            "Rel Vol": round(rel_vol, 1) if rel_vol else None,
             "Circ Supply (M)": round(circ_m, 1) if circ_m else None,
-            "News": "Yes" if news_items else "No", "Headline": news_items[0]["headline"] if news_items else "",
-            "News Items": news_items, "Score": score
+            "News": "Yes" if news_items else "No",
+            "Headline": news_items[0]["headline"] if news_items else "",
+            "News Items": news_items,
+            "Score": score
         }
     except Exception:
         return None
@@ -245,15 +285,20 @@ def make_chart(symbol, period, interval, title):
         if hist.empty:
             return None
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03,
-                            row_heights=[0.72, 0.28], subplot_titles=(f"{symbol} — {title}", "Volume"))
-        fig.add_trace(go.Candlestick(x=hist.index, open=hist["Open"], high=hist["High"],
-                                     low=hist["Low"], close=hist["Close"],
-                                     increasing_line_color="#22c55e", decreasing_line_color="#ef4444"), row=1, col=1)
+                            row_heights=[0.72, 0.28],
+                            subplot_titles=(f"{symbol} — {title}", "Volume"))
+        fig.add_trace(go.Candlestick(
+            x=hist.index, open=hist["Open"], high=hist["High"],
+            low=hist["Low"], close=hist["Close"],
+            increasing_line_color="#22c55e", decreasing_line_color="#ef4444"
+        ), row=1, col=1)
         colors = ["#22c55e" if c >= o else "#ef4444" for o, c in zip(hist["Open"], hist["Close"])]
         fig.add_trace(go.Bar(x=hist.index, y=hist["Volume"], marker_color=colors, opacity=0.7), row=2, col=1)
-        fig.update_layout(template="plotly_dark", paper_bgcolor="#070b14", plot_bgcolor="#0c1220",
-                          font=dict(color="#e8edf5", size=11), height=380,
-                          margin=dict(l=8, r=8, t=36, b=8), xaxis_rangeslider_visible=False, showlegend=False)
+        fig.update_layout(
+            template="plotly_dark", paper_bgcolor="#070b14", plot_bgcolor="#0c1220",
+            font=dict(color="#e8edf5", size=11), height=380,
+            margin=dict(l=8, r=8, t=36, b=8), xaxis_rangeslider_visible=False, showlegend=False
+        )
         fig.update_xaxes(gridcolor="#1a2332")
         fig.update_yaxes(gridcolor="#1a2332")
         return fig
@@ -281,74 +326,156 @@ def color_change(val):
     except: pass
     return ""
 
-def render_scanner(market, title, min_score_default=2):
-    st.markdown(f"### {title}")
-    min_score = st.slider("Minimum Score", 0, 5, min_score_default, key=f"min_{market}")
-    
-    if st.button("Scan Now", type="primary", key=f"btn_{market}", use_container_width=True):
-        with st.spinner("Scanning…"):
-            df = run_scan(market)
-            st.session_state[f"df_{market}"] = df
+# ===================== SIDEBAR (criteria by tab) =====================
+# We detect active tab via session state
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = "US"
 
-    df = st.session_state.get(f"df_{market}", None)
-    if df is None or df.empty:
-        st.info("Click Scan Now to load results.")
-        return
+with st.sidebar:
+    st.markdown("### Criteria")
+    tab_choice = st.radio(
+        "Market",
+        ["US Stocks", "UK / EU Stocks", "Crypto"],
+        key="tab_radio",
+        label_visibility="collapsed"
+    )
 
+    if tab_choice == "US Stocks":
+        st.session_state.active_tab = "US"
+        st.markdown("""
+        **US Criteria**  
+        1. Up ≥ 10% today  
+        2. Rel Vol ≥ 5×  
+        3. Recent News  
+        4. Price $2 – $20  
+        5. Float < 20M  
+        """)
+    elif tab_choice == "UK / EU Stocks":
+        st.session_state.active_tab = "UK_EU"
+        st.markdown("""
+        **UK / EU Criteria**  
+        1. Up ≥ 8% today  
+        2. Rel Vol ≥ 4×  
+        3. Recent News  
+        4. Price £0.05 – £15  
+        5. Float < 60M  
+        """)
+    else:
+        st.session_state.active_tab = "Crypto"
+        st.markdown("""
+        **Crypto Criteria**  
+        1. Up ≥ 8% today  
+        2. Rel Vol ≥ 3×  
+        3. Recent News  
+        4. Price $0.05 – $50  
+        5. (Circulating supply shown)  
+        """)
+
+    st.markdown("---")
+    min_score = st.slider("Minimum Score", 0, 5, 2)
+    st.caption("Educational tool only. Not financial advice.")
+
+# ===================== MAIN CONTENT =====================
+st.markdown("## Momentum Scanner")
+st.caption("US · UK/EU · Crypto")
+
+market = st.session_state.active_tab
+title_map = {"US": "US Stocks", "UK_EU": "UK / EU Stocks", "Crypto": "Crypto"}
+st.markdown(f"### {title_map[market]}")
+
+# Auto-scan when tab changes and no data exists
+key = f"df_{market}"
+if key not in st.session_state or st.session_state.get("last_tab") != market:
+    st.session_state.last_tab = market
+    with st.spinner(f"Loading {title_map[market]}…"):
+        st.session_state[key] = run_scan(market)
+
+# Manual re-scan button
+if st.button("Re-scan Now", type="primary", use_container_width=True):
+    with st.spinner("Scanning…"):
+        st.session_state[key] = run_scan(market)
+
+df = st.session_state.get(key, None)
+
+if df is None or df.empty:
+    st.info("No data yet. Click Re-scan Now.")
+else:
     display = df[df["Score"] >= min_score].copy()
+
     m1, m2, m3 = st.columns(3)
     m1.metric("Matches", len(display))
     m2.metric("High Conviction (≥4)", len(df[df["Score"] >= 4]))
-    m3.metric("Best Score", int(df["Score"].max()))
+    m3.metric("Best Score", int(df["Score"].max()) if not df.empty else 0)
 
-    left, right = st.columns([1.5, 1])
+    st.markdown("---")
+
+    # Rankings (left) + Detail/News (right)
+    left, right = st.columns([1.55, 1])
+
     with left:
         st.markdown("#### Rankings")
         show_cols = [c for c in ["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "Circ Supply (M)", "News", "Score"] if c in display.columns]
         table = display[show_cols].copy()
-        styled = table.style.map(color_score, subset=["Score"]).map(color_rvol, subset=["Rel Vol"]).map(color_change, subset=["% Change"])
-        st.dataframe(styled, use_container_width=True, height=400, hide_index=True)
+        styled = (table.style
+                  .map(color_score, subset=["Score"])
+                  .map(color_rvol, subset=["Rel Vol"])
+                  .map(color_change, subset=["% Change"]))
+        st.dataframe(styled, use_container_width=True, height=420, hide_index=True)
 
+    selected = None
     with right:
         st.markdown("#### Detail & News")
         if len(display) > 0:
-            selected = st.selectbox("Select", display["Symbol"].tolist(), key=f"sel_{market}")
+            selected = st.selectbox("Select stock", display["Symbol"].tolist(), key=f"sel_{market}")
             row = display[display["Symbol"] == selected].iloc[0]
-            st.markdown(f"**{selected}**  ·  ${row['Price']}  ({row['% Change']:+.1f}%)")
-            st.write(f"Score: **{row['Score']}**  |  Rel Vol: **{row.get('Rel Vol', '—')}**")
-            
+
+            st.markdown(f"""
+            <div class="detail-card">
+                <strong style="font-size:1.2rem; color:#38bdf8;">{selected}</strong><br>
+                <span style="font-size:1.4rem; font-weight:700;">
+                    {row['Price']}
+                    <span style="color:{'#4ade80' if row['% Change'] >= 0 else '#f87171'}; font-size:1rem;">
+                        {row['% Change']:+.1f}%
+                    </span>
+                </span><br>
+                <span style="color:#94a3b8; font-size:0.9rem;">
+                    Rel Vol: <b>{row.get('Rel Vol', '—')}</b> · Score: <b style="color:#fbbf24">{row['Score']}</b>
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
             news_items = row.get("News Items") or []
             if news_items:
                 st.markdown("**Top News**")
                 for item in news_items[:5]:
-                    st.markdown(f'<div class="news-item"><a href="{item["url"]}" target="_blank">{item["headline"]}</a><div class="news-source">{item.get("source","")}</div></div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="news-item"><a href="{item["url"]}" target="_blank">{item["headline"]}</a>'
+                        f'<div class="news-source">{item.get("source", "")}</div></div>',
+                        unsafe_allow_html=True
+                    )
             else:
                 st.caption("No recent news")
-
-            st.markdown("**Charts**")
-            c1, c2 = st.columns(2)
-            with c1:
-                fig = make_chart(selected, "3mo", "1d", "Daily")
-                if fig: st.plotly_chart(fig, use_container_width=True)
-            with c2:
-                fig = make_chart(selected, "10d", "1h", "Hourly")
-                if fig: st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("No matches")
+            st.info("No stocks match the filters.")
 
-# ===================== MAIN =====================
-st.markdown("## Momentum Scanner")
-st.caption("US · UK/EU · Crypto  |  Dark terminal style")
+    # ========== CHARTS FULL WIDTH BELOW RANKINGS ==========
+    if selected:
+        st.markdown("---")
+        st.markdown("#### Charts")
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = make_chart(selected, "3mo", "1d", "Daily")
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("Daily chart unavailable")
+        with c2:
+            fig = make_chart(selected, "10d", "1h", "Hourly")
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("Hourly chart unavailable")
 
-tab1, tab2, tab3 = st.tabs(["U.S. Stocks", "UK/EU Stocks", "🪙 Crypto"])
-
-with tab1:
-    render_scanner("US", "U.S. Momentum Scanner")
-
-with tab2:
-    st.caption("Criteria adapted: Price £0.05–£15 · Float < 60M · Up ≥ 8%")
-    render_scanner("UK_EU", "UK / EU Momentum Scanner")
-
-with tab3:
-    st.caption("Criteria: Up ≥ 8% · Rel Vol ≥ 3× · Price $0.05–$50")
-    render_scanner("Crypto", "Crypto Momentum Scanner")
+    st.markdown("---")
+    csv = display.drop(columns=["News Items"], errors="ignore").to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", csv, f"scanner_{market}.csv", "text/csv")
