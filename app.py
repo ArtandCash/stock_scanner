@@ -367,10 +367,25 @@ def render_scanner(market, criteria_html):
         st.markdown("#### Rankings")
         show_cols = [c for c in ["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "Circ Supply (M)", "News", "Score"] if c in display.columns]
         table = display[show_cols].copy()
+
+        # Force 2 decimal places on numeric columns
+        format_dict = {
+            "Price": "{:.2f}",
+            "% Change": "{:+.2f}%",
+            "Rel Vol": "{:.2f}x",
+            "Float (M)": "{:.2f}",
+            "Circ Supply (M)": "{:.2f}",
+            "Score": "{:.0f}"
+        }
+        # Only keep formats for columns that actually exist
+        format_dict = {k: v for k, v in format_dict.items() if k in table.columns}
+
         styled = (table.style
                   .map(color_score, subset=["Score"])
                   .map(color_rvol, subset=["Rel Vol"])
-                  .map(color_change, subset=["% Change"]))
+                  .map(color_change, subset=["% Change"])
+                  .format(format_dict, na_rep="—"))
+
         st.dataframe(styled, use_container_width=True, height=420, hide_index=True)
 
     selected = None
@@ -380,17 +395,21 @@ def render_scanner(market, criteria_html):
             selected = st.selectbox("Select stock", display["Symbol"].tolist(), key=f"sel_{market}")
             row = display[display["Symbol"] == selected].iloc[0]
 
+            price_str = f"{row['Price']:.2f}"
+            change_str = f"{row['% Change']:+.2f}%"
+            rel_vol_str = f"{row['Rel Vol']:.2f}" if pd.notna(row.get("Rel Vol")) else "—"
+
             st.markdown(f"""
             <div class="detail-card">
                 <strong style="font-size:1.2rem; color:#38bdf8;">{selected}</strong><br>
                 <span style="font-size:1.4rem; font-weight:700;">
-                    {row['Price']}
+                    {price_str}
                     <span style="color:{'#4ade80' if row['% Change'] >= 0 else '#f87171'}; font-size:1rem;">
-                        {row['% Change']:+.1f}%
+                        {change_str}
                     </span>
                 </span><br>
                 <span style="color:#94a3b8; font-size:0.9rem;">
-                    Rel Vol: <b>{row.get('Rel Vol', '—')}</b> · Score: <b style="color:#fbbf24">{row['Score']}</b>
+                    Rel Vol: <b>{rel_vol_str}</b> · Score: <b style="color:#fbbf24">{row['Score']}</b>
                 </span>
             </div>
             """, unsafe_allow_html=True)
