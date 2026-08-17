@@ -173,7 +173,7 @@ def fetch_stock(symbol, client, market="US"):
             c3 = len(news_items) > 0
             c4 = 2.0 <= price <= 20.0
             c5 = float_m is not None and float_m < 20
-        else:  # UK_EU
+        else:
             c1 = pct_change >= 8
             c2 = rel_vol is not None and rel_vol >= 4
             c3 = len(news_items) > 0
@@ -304,4 +304,222 @@ def make_chart(symbol, period, interval, title):
         fig.update_layout(
             template="plotly_dark", paper_bgcolor="#070b14", plot_bgcolor="#0c1220",
             font=dict(color="#e8edf5", size=11), height=380,
-            margin=dict(l=8, r=8, t=36, b=8), xaxis_rangeslider_visible
+            margin=dict(l=8, r=8, t=36, b=8), xaxis_rangeslider_visible=False, showlegend=False
+        )
+        fig.update_xaxes(gridcolor="#1a2332")
+        fig.update_yaxes(gridcolor="#1a2332")
+        return fig
+    except Exception:
+        return None
+
+def color_score(val):
+    if val >= 4: return "background-color: #14532d; color: #bbf7d0"
+    if val == 3: return "background-color: #713f12; color: #fef08a"
+    if val == 2: return "background-color: #7c2d12; color: #fed7aa"
+    return ""
+
+def color_rvol(val):
+    try:
+        if val and float(val) >= 5: return "background-color: #0e7490; color: #a5f3fc"
+        if val and float(val) >= 3: return "background-color: #1e3a5f; color: #7dd3fc"
+    except: pass
+    return ""
+
+def color_change(val):
+    try:
+        if float(val) >= 10: return "background-color: #14532d; color: #bbf7d0"
+        if float(val) > 0: return "color: #4ade80"
+        if float(val) < 0: return "color: #f87171"
+    except: pass
+    return ""
+
+def render_momentum_scanner(market, criteria_html):
+    st.markdown(f'<div class="criteria-box">{criteria_html}</div>', unsafe_allow_html=True)
+
+    key = f"df_{market}"
+    if key not in st.session_state:
+        with st.spinner(f"Loading {market} data…"):
+            st.session_state[key] = run_scan(market)
+
+    if st.button("Re-scan Now", type="primary", key=f"btn_{market}", use_container_width=True):
+        with st.spinner("Scanning…"):
+            st.session_state[key] = run_scan(market)
+
+    df = st.session_state.get(key, None)
+    if df is None or df.empty:
+        st.info("No data yet. Click Re-scan Now.")
+        return
+
+    min_score = st.session_state.get("min_score", 2)
+    display = df[df["Score"] >= min_score].copy()
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Matches", len(display))
+    m2.metric("High Conviction (≥4)", len(df[df["Score"] >= 4]))
+    m3.metric("Best Score", int(df["Score"].max()) if not df.empty else 0)
+
+    st.markdown("---")
+
+    left, right = st.columns([1.55, 1])
+
+    with left:
+        st.markdown("#### Rankings")
+        show_cols = [c for c in ["Rank", "Symbol", "Price", "% Change", "Rel Vol", "Float (M)", "Circ Supply (M)", "News", "Score"] if c in display.columns]
+        table = display[show_cols].copy()
+
+        format_dict = {
+            "Price": "{:.2f}",
+            "% Change": "{:+.2f}%",
+            "Rel Vol": "{:.2f}x",
+            "Float (M)": "{:.2f}",
+            "Circ Supply (M)": "{:.2f}",
+            "Score": "{:.0f}"
+        }
+        format_dict = {k: v for k, v in format_dict.items() if k in table.columns}
+
+        styled = (table.style
+                  .map(color_score, subset=["Score"])
+                  .map(color_rvol, subset=["Rel Vol"])
+                  .map(color_change, subset=["% Change"])
+                  .format(format_dict, na_rep="—"))
+
+        st.dataframe(styled, use_container_width=True, height=420, hide_index=True)
+
+    selected = None
+    with right:
+        st.markdown("#### Detail & News")
+        if len(display) > 0:
+            selected = st.selectbox("Select stock", display["Symbol"].tolist(), key=f"sel_{market}")
+            row = display[display["Symbol"] == selected].iloc[0]
+
+            price_str = f"{row['Price']:.2f}"
+            change_str = f"{row['% Change']:+.2f}%"
+            rel_vol_str = f"{row['Rel Vol']:.2f}" if pd.notna(row.get("Rel Vol")) else "—"
+
+            st.markdown(f"""
+            <div class="detail-card">
+                <strong style="font-size:1.2rem; color:#38bdf8;">{selected}</strong><br>
+                <span style="font-size:1.4rem; font-weight:700;">
+                    {price_str}
+                    <span style="color:{'#4ade80' if row['% Change'] >= 0 else '#f87171'}; font-size:1rem;">
+                        {change_str}
+                    </span>
+                </span><br>
+                <span style="color:#94a3b8; font-size:0.9rem;">
+                    Rel Vol: <b>{rel_vol_str}</b> · Score: <b style="color:#fbbf24">{row['Score']}</b>
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            news_items = row.get("News Items") or []
+            if news_items:
+                st.markdown("**Top News**")
+                for item in news_items[:5]:
+                    st.markdown(
+                        f'<div class="news-item"><a href="{item["url"]}" target="_blank">{item["headline"]}</a>'
+                        f'<div class="news-source">{item.get("source", "")}</div></div>',
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.caption("No recent news")
+        else:
+            st.info("No stocks match the filters.")
+
+    if selected:
+        st.markdown("---")
+        st.markdown("#### Charts")
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = make_chart(selected, "3mo", "1d", "Daily")
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("Daily chart unavailable")
+        with c2:
+            fig = make_chart(selected, "10d", "1h", "Hourly")
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.caption("Hourly chart unavailable")
+
+    st.markdown("---")
+    csv = display.drop(columns=["News Items"], errors="ignore").to_csv(index=False).encode("utf-8")
+    st.download_button("Download CSV", csv, f"scanner_{market}.csv", "text/csv", key=f"dl_{market}")
+
+# ===================== SIDEBAR =====================
+with st.sidebar:
+    st.markdown("### Navigation")
+    section = st.radio(
+        "Select section",
+        [
+            "Stocks: Momentum Scanner",
+            "Stocks: ATH / ATL",
+            "Crypto: Momentum Scanner",
+            "Crypto: ATH / ATL"
+        ],
+        label_visibility="collapsed"
+    )
+
+    st.markdown("---")
+    st.markdown("### Settings")
+    st.session_state.min_score = st.slider("Minimum Score", 0, 5, 2)
+    
+    auto_refresh = st.toggle("Auto-refresh every 90s", value=False)
+    
+    st.markdown("---")
+    st.caption("Educational tool only. Not financial advice.")
+
+# Auto-refresh
+if auto_refresh:
+    try:
+        from streamlit_autorefresh import st_autorefresh
+        st_autorefresh(interval=90_000, key="auto_refresh_90s")
+    except ImportError:
+        st.sidebar.warning("Add streamlit-autorefresh to requirements.txt")
+
+# ===================== MAIN CONTENT =====================
+st.markdown("## Momentum Scanner")
+
+if section == "Stocks: Momentum Scanner":
+    st.caption("US + UK/EU momentum scanners")
+    
+    tab1, tab2 = st.tabs(["🇺🇸 US Stocks", "🇬🇧 EU / UK Stocks"])
+    
+    with tab1:
+        render_momentum_scanner("US", """
+            <b>US Criteria (equal weight)</b><br>
+            1. Up ≥ 10% today<br>
+            2. Rel Vol ≥ 5×<br>
+            3. Recent News<br>
+            4. Price $2 – $20<br>
+            5. Float < 20M
+        """)
+    
+    with tab2:
+        render_momentum_scanner("UK_EU", """
+            <b>UK / EU Criteria (equal weight)</b><br>
+            1. Up ≥ 8% today<br>
+            2. Rel Vol ≥ 4×<br>
+            3. Recent News<br>
+            4. Price £0.05 – £15<br>
+            5. Float < 60M
+        """)
+
+elif section == "Crypto: Momentum Scanner":
+    st.caption("Crypto momentum scanner")
+    render_momentum_scanner("Crypto", """
+        <b>Crypto Criteria (equal weight)</b><br>
+        1. Up ≥ 8% today<br>
+        2. Rel Vol ≥ 3×<br>
+        3. Recent News<br>
+        4. Price $0.05 – $50<br>
+        5. Circulating supply shown for reference
+    """)
+
+elif section == "Stocks: ATH / ATL":
+    st.markdown("### Stocks: ATH / ATL Scanner")
+    st.info("This section is ready. Please provide the criteria for the Stocks ATH / ATL scanner and I will build it.")
+
+elif section == "Crypto: ATH / ATL":
+    st.markdown("### Crypto: ATH / ATL Scanner")
+    st.info("This section is ready. Please provide the criteria for the Crypto ATH / ATL scanner and I will build it.")
